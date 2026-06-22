@@ -272,6 +272,40 @@
       opacity: 1;
     }
 
+    #newSuggestionToast {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: #facc15;
+      color: #0b0c10;
+      padding: 14px 22px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 15px;
+      z-index: 9997;
+      box-shadow: 0 8px 30px rgba(250,204,21,0.4);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(-160px);
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease;
+      pointer-events: none;
+    }
+    #newSuggestionToast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    @keyframes suggestionFlash {
+      0%   { box-shadow: 0 0 0 0 rgba(250,204,21,0.7); }
+      50%  { box-shadow: 0 0 0 12px rgba(250,204,21,0); }
+      100% { box-shadow: none; }
+    }
+    .suggestion-card.new-suggestion {
+      animation: suggestionFlash 1.2s ease 3;
+      border-color: #facc15;
+    }
+
     /* ── SEARCH BAR ── */
     #adminSearchWrap {
       position: relative;
@@ -503,12 +537,13 @@
 
   <!-- Real-time new order toast -->
   <div id="newOrderToast">🔔 New Order Received!</div>
+  <div id="newSuggestionToast">💬 New Suggestion!</div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function() { if (window.supabase) initSupabase(); });
     window.addEventListener("load", function() { if (!sb && window.supabase) initSupabase(); });
-    const MASTER_SECRET = "onebite2026"; 
+    const MASTER_SECRET = "noman"; 
 
     function verifyGate() {
       const input = document.getElementById("passKey").value;
@@ -516,6 +551,7 @@
         document.getElementById("lockScreen").style.display = "none";
         document.getElementById("dashboardContainer").style.display = "block";
         loadAllData();
+        startRealtimeOrders();
       } else {
         alert("Access Denied: Invalid Admin Key");
         document.getElementById("passKey").value = "";
@@ -529,7 +565,7 @@
     function initSupabase() {
       sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
       startViewerCount();
-      startRealtimeOrders();
+      // realtime starts after login
     }
 
     // ── LIVE VIEWER COUNT ──────────────────────────────────────────────────
@@ -613,6 +649,49 @@
       setTimeout(() => toast.classList.remove('show'), 4000);
     }
 
+    function showNewSuggestionToast() {
+      const t = document.getElementById('newSuggestionToast');
+      if (!t) return;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 4000);
+    }
+
+    function playNewSuggestionSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [660, 880].forEach((freq, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.frequency.value = freq; o.type = 'sine';
+          g.gain.setValueAtTime(0.18, ctx.currentTime + i * 0.13);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.13 + 0.35);
+          o.start(ctx.currentTime + i * 0.13);
+          o.stop(ctx.currentTime + i * 0.13 + 0.35);
+        });
+      } catch(e) {}
+    }
+
+    function prependSuggestionCard(s) {
+      const box = document.getElementById('suggestionsContainer');
+      if (!box) return;
+      const empty = box.querySelector('.suggestions-empty');
+      if (empty) empty.remove();
+      const count = box.querySelectorAll('.suggestion-card').length + 1;
+      const date = s.created_at ? new Date(s.created_at).toLocaleString('en-PK') : new Date().toLocaleString('en-PK');
+      const card = document.createElement('div');
+      card.className = 'suggestion-card new-suggestion';
+      card.id = 'suggestion-card-' + s.id;
+      card.innerHTML = `
+        <div class="suggestion-meta">
+          <span class="suggestion-num">Msg #${count}</span>
+          <span class="suggestion-date">📅 ${date}</span>
+        </div>
+        <div class="suggestion-message">${s.message || '—'}</div>
+        <button class="suggestion-delete" onclick="deleteSuggestion('${s.id}')">🗑 Delete</button>`;
+      box.insertBefore(card, box.firstChild);
+      setTimeout(() => card.classList.remove('new-suggestion'), 4000);
+    }
+
     function prependOrderCard(order) {
       const container = document.getElementById('ordersContainer');
 
@@ -663,11 +742,17 @@
       setTimeout(() => card.classList.remove('new-order'), 4000);
     }
 
+    let _rtStarted = false;
+
     function startRealtimeOrders() {
-      sb.channel('orders-realtime')
+      if (_rtStarted) return;
+      _rtStarted = true;
+
+      sb.channel('orders-ch-' + Date.now())
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'orders' },
           (payload) => {
+            console.log('[RT] new order', payload.new);
             playNewOrderSound();
             showNewOrderToast();
             prependOrderCard(payload.new);
@@ -676,12 +761,37 @@
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'orders' },
           (payload) => {
-            // Remove the card visually if deleted from another session
-            const card = document.getElementById(`order-card-${payload.old.id}`);
+            const card = document.getElementById('order-card-' + payload.old.id);
             if (card) card.remove();
           }
         )
-        .subscribe();
+        .subscribe((status, err) => {
+          console.log('[RT] orders:', status, err || '');
+        });
+
+      sb.channel('suggestions-ch-' + Date.now())
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'suggestions' },
+          (payload) => {
+            console.log('[RT] new suggestion', payload.new);
+            playNewSuggestionSound();
+            showNewSuggestionToast();
+            prependSuggestionCard(payload.new);
+          }
+        )
+        .on('postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'suggestions' },
+          (payload) => {
+            const card = document.getElementById('suggestion-card-' + payload.old.id);
+            if (card) card.remove();
+            const box = document.getElementById('suggestionsContainer');
+            if (box && !box.querySelector('.suggestion-card'))
+              box.innerHTML = '<div class="suggestions-empty"><span>💬</span>No suggestions yet.</div>';
+          }
+        )
+        .subscribe((status, err) => {
+          console.log('[RT] suggestions:', status, err || '');
+        });
     }
     /* ── END REAL-TIME ── */
 
