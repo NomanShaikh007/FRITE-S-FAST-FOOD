@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>One Bite — Admin Dashboard</title>
+  <title>Frite's Fast Food — Admin</title>
   
   <style>
     :root {
@@ -23,8 +23,10 @@
       margin: 0;
       font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
       color: var(--text);
-      background: radial-gradient(circle at 10% 20%, rgba(255, 77, 77, 0.08) 0%, transparent 40%),
-                  radial-gradient(circle at 90% 80%, rgba(255, 184, 77, 0.06) 0%, transparent 40%),
+      background: radial-gradient(ellipse 900px 600px at 80% 0%,   rgba(220, 38, 38, 0.22), transparent 60%),
+                  radial-gradient(ellipse 700px 500px at 10% 5%,   rgba(250, 204, 21, 0.16), transparent 55%),
+                  radial-gradient(ellipse 600px 500px at 50% 100%, rgba(220, 38, 38, 0.14), transparent 55%),
+                  radial-gradient(ellipse 500px 400px at 90% 80%,  rgba(250, 204, 21, 0.10), transparent 50%),
                   var(--bg);
       background-attachment: fixed;
       padding: 20px;
@@ -323,7 +325,7 @@
 
   <div id="lockScreen">
     <div class="lock-box">
-      <h2 style="margin-top:0; color:var(--brand);">One Bite Admin</h2>
+      <h2 style="margin-top:0; color:var(--brand);">Frite's Fast Food Admin</h2>
       <p style="color:var(--muted); font-size:14px; margin-bottom:20px;">Enter administrative access key</p>
       <input type="password" id="passKey" placeholder="••••••••" style="text-align:center; margin-bottom:15px; font-size:16px;" onkeydown="if(event.key === 'Enter') verifyGate()">
       <button class="btn btn-brand" onclick="verifyGate()" style="width:100%;">Access Dashboard</button>
@@ -333,7 +335,7 @@
   <div class="container" id="dashboardContainer">
     <header>
       <div>
-        <h1>One Bite <span>Dashboard</span></h1>
+        <h1>Frite's Fast Food <span>Dashboard</span></h1>
         <p>Live Back-office Control Center</p>
       </div>
       <div style="display: flex; align-items: center; gap: 12px;">
