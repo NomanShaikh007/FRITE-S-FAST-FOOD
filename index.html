@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>One Bite — Online Orders</title>
+  <title>Frite's Fast Food — Online Orders</title>
   <style>
     :root {
       --bg: #0b0c10;
@@ -43,9 +43,10 @@
         "Segoe UI Emoji";
       color: var(--text);
       background:
-        radial-gradient(900px 600px at 85% 0%, rgba(255, 77, 77, 0.22), transparent 60%),
-        radial-gradient(800px 520px at 15% 10%, rgba(255, 184, 77, 0.18), transparent 55%),
-        radial-gradient(700px 520px at 40% 100%, rgba(61, 220, 151, 0.12), transparent 55%),
+        radial-gradient(ellipse 900px 600px at 80% 0%,   rgba(220, 38, 38, 0.30), transparent 60%),
+        radial-gradient(ellipse 700px 500px at 10% 5%,   rgba(250, 204, 21, 0.22), transparent 55%),
+        radial-gradient(ellipse 600px 500px at 50% 100%, rgba(220, 38, 38, 0.18), transparent 55%),
+        radial-gradient(ellipse 500px 400px at 90% 80%,  rgba(250, 204, 21, 0.14), transparent 50%),
         var(--bg);
     }
 
@@ -85,7 +86,8 @@
       text-align: center;
       gap: 2px;
       width: 100%;
-      padding: 0 60px;
+      padding: 0 180px;
+      min-width: 0;
     }
 
     .welcomeTag {
@@ -99,12 +101,16 @@
 
     .restaurantName {
       margin: 0;
-      font-size: clamp(28px, 8vw, 46px);
+      font-size: clamp(16px, 2.4vw, 28px);
       font-weight: 800;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       line-height: 1.1;
       text-transform: uppercase;
-      background: linear-gradient(92deg, #fff 10%, #ffe8c8 50%, var(--brand2) 100%);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      background: linear-gradient(92deg, #fff 10%, #fde68a 45%, #ef4444 100%);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
@@ -349,12 +355,22 @@
 
       /* Make room for hamburger + cart on the left (and keep title centered) */
       .brandCenter {
-        padding: 0 96px;
+        padding: 0 100px;
+        min-width: 0;
+      }
+
+      .welcomeTag {
+        font-size: 9px;
+        letter-spacing: 0.14em;
       }
 
       .restaurantName {
-        font-size: clamp(20px, 6.2vw, 46px);
+        font-size: clamp(11px, 3.6vw, 18px);
+        letter-spacing: 0.04em;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
       }
     }
 
@@ -1399,6 +1415,7 @@
     /* ── CART BUTTON (desktop nav) ── */
     .cartBtn {
       position: relative;
+      color: #ffffff;
     }
 
     .cartBadge {
@@ -1665,7 +1682,7 @@
 
         <div class="brandCenter">
           <span class="welcomeTag">Welcome to</span>
-          <h1 class="restaurantName">One Bite</h1>
+          <h1 class="restaurantName">Frite's Fast Food</h1>
           <div class="devline">Developed by Noman Shaikh</div>
         </div>
 
@@ -1730,7 +1747,7 @@
           <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" stroke-width="1.8" />
           <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
-        About One Bite
+        About Frite's Fast Food
       </a>
       <!-- Suggestion Button -->
       <button class="suggestionBtn" type="button" onclick="toggleSuggestionPanel()">
@@ -2011,7 +2028,7 @@
 
     const setHeader = ({ title, subtitle }) => {
       // Updates the browser tab title as the user navigates
-      document.title = title ? `${title} — One Bite` : "One Bite — Online Orders";
+      document.title = title ? `${title} — Frite's Fast Food` : "Frite's Fast Food — Online Orders";
     };
 
     const routes = {
@@ -2216,12 +2233,12 @@
       },
 
       about() {
-        setHeader({ title: "About Us", subtitle: "Know more about One Bite." });
+        setHeader({ title: "About Us", subtitle: "Know more about Frite's Fast Food." });
         const root = document.getElementById("root");
         root.innerHTML = `
           <section class="mutedBox" style="display:grid;gap:12px;">
             <h2 style="margin:0;color:var(--text)">Our Story</h2>
-            <p style="margin:0;line-height:1.5;">Welcome to One Bite! We serve the freshest pizza, crispy burgers, and mouthwatering traditional charcoal tikka and paratha rolls.</p>
+            <p style="margin:0;line-height:1.5;">Welcome to Frite's Fast Food! We serve the freshest pizza, crispy burgers, and mouthwatering traditional charcoal tikka and paratha rolls.</p>
             
             <div class="aboutInfoTable">
               <div class="aboutKey">Date of Opening</div>
