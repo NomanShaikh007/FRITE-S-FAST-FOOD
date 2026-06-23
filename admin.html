@@ -538,7 +538,6 @@
   <!-- Real-time new order toast -->
   <div id="newOrderToast">🔔 New Order Received!</div>
   <div id="newSuggestionToast">💬 New Suggestion!</div>
-  <div id="newSuggestionToast">💬 New Suggestion!</div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
@@ -648,49 +647,6 @@
       const toast = document.getElementById('newOrderToast');
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 4000);
-    }
-
-    function showNewSuggestionToast() {
-      const t = document.getElementById('newSuggestionToast');
-      if (!t) return;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 4000);
-    }
-
-    function playNewSuggestionSound() {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        [660, 880].forEach((freq, i) => {
-          const o = ctx.createOscillator(), g = ctx.createGain();
-          o.connect(g); g.connect(ctx.destination);
-          o.frequency.value = freq; o.type = 'sine';
-          g.gain.setValueAtTime(0.18, ctx.currentTime + i * 0.13);
-          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.13 + 0.35);
-          o.start(ctx.currentTime + i * 0.13);
-          o.stop(ctx.currentTime + i * 0.13 + 0.35);
-        });
-      } catch(e) {}
-    }
-
-    function prependSuggestionCard(s) {
-      const box = document.getElementById('suggestionsContainer');
-      if (!box) return;
-      const empty = box.querySelector('.suggestions-empty');
-      if (empty) empty.remove();
-      const count = box.querySelectorAll('.suggestion-card').length + 1;
-      const date = s.created_at ? new Date(s.created_at).toLocaleString('en-PK') : new Date().toLocaleString('en-PK');
-      const card = document.createElement('div');
-      card.className = 'suggestion-card new-suggestion';
-      card.id = 'suggestion-card-' + s.id;
-      card.innerHTML = `
-        <div class="suggestion-meta">
-          <span class="suggestion-num">Msg #${count}</span>
-          <span class="suggestion-date">📅 ${date}</span>
-        </div>
-        <div class="suggestion-message">${s.message || '—'}</div>
-        <button class="suggestion-delete" onclick="deleteSuggestion('${s.id}')">🗑 Delete</button>`;
-      box.insertBefore(card, box.firstChild);
-      setTimeout(() => card.classList.remove('new-suggestion'), 4000);
     }
 
     function showNewSuggestionToast() {
@@ -993,50 +949,27 @@
       btn.className = newStatus === 'done' ? 'btn-status-done' : 'btn-status-pending';
       btn.innerHTML = newStatus === 'done' ? '✅ Done' : '⏳ Pending';
 
+      // Save to Supabase
       try {
-        // Save status to Supabase
         const { error } = await sb.from('orders').update({ status: newStatus }).eq('id', id);
         if (error) throw error;
 
         // Send push notification to customer when marked as done
         if (newStatus === 'done') {
-          // Fetch the push subscription for this order from the CORRECT project
-          const { data: subData, error: subErr } = await sb
-            .from('push_subscriptions')
-            .select('subscription')
-            .eq('order_id', id)
-            .single();
-
-          if (subErr || !subData) {
-            console.warn('No push subscription found for order:', id);
-          } else {
-            // Send notification directly using the Web Push API via fetch
-            const sub = JSON.parse(subData.subscription);
-            console.log('Sending push to:', sub.endpoint);
-
-            // Call the edge function on the CORRECT project
-            fetch(SUPABASE_URL + '/functions/v1/send-push', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + SUPABASE_KEY
-              },
-              body: JSON.stringify({
-                order_id: id,
-                subscription: sub,
-                message: {
-                  title: "🍔 Frite's Fast Food",
-                  body: "Your order is on its way! 🛵"
-                }
-              })
-            })
-            .then(r => r.json())
-            .then(d => {
-              if (d.ok || d.success) console.log('✅ Notification sent to customer!');
-              else console.error('❌ Push failed:', d);
-            })
-            .catch(e => console.error('Push fetch error:', e));
-          }
+          fetch(SUPABASE_URL + '/functions/v1/send-push', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + SUPABASE_KEY
+            },
+            body: JSON.stringify({ order_id: id })
+          })
+          .then(r => r.json())
+          .then(d => {
+            if (d.ok) console.log('✅ Notification sent to customer!');
+            else console.error('❌ Push failed:', d.error);
+          })
+          .catch(e => console.error('Push fetch error:', e));
         }
 
       } catch (err) {
