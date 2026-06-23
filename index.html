@@ -769,30 +769,6 @@
       color: var(--muted);
     }
 
-    .fieldError {
-      display: none;
-      color: #ef4444;
-      font-size: 11.5px;
-      font-weight: 600;
-      margin-top: 4px;
-      padding: 4px 8px;
-      background: rgba(239,68,68,0.10);
-      border-radius: 6px;
-      border-left: 3px solid #ef4444;
-    }
-    .fieldError.visible {
-      display: block;
-    }
-    input.inputError, textarea.inputError {
-      border-color: #ef4444 !important;
-      background: rgba(239,68,68,0.06) !important;
-    }
-    select option {
-      background: #1a1a2e;
-      color: #ffffff;
-      font-size: 14px;
-    }
-
     input,
     textarea,
     select {
@@ -803,11 +779,6 @@
       background: rgba(255, 255, 255, 0.06);
       color: var(--text);
       outline: none;
-    }
-
-    select option {
-      background: #1a1a2e;
-      color: #ffffff;
     }
 
     textarea {
@@ -1858,48 +1829,43 @@
         <div class="formRow">
           <label>
             Your name
-            <input required name="name" autocomplete="name" placeholder="e.g. Ali" id="inputName" />
-            <span class="fieldError" id="errName">⚠ Please enter your name</span>
+            <input required name="name" autocomplete="name" placeholder="e.g. Ali" />
           </label>
           <label>
             Phone
-            <input required name="phone" autocomplete="tel" placeholder="e.g. 03001234567" id="inputPhone" maxlength="11" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'');" />
-            <span class="fieldError" id="errPhone">⚠ Enter a valid 11-digit number</span>
+            <input required name="phone" autocomplete="tel" placeholder="e.g. 03xx-xxxxxxx" />
           </label>
         </div>
 
         <div class="formRow">
           <label>
             Quantity
-            <select required name="qty" id="inputQty">
+            <select required name="qty">
               <option value="1">1</option>
               <option value="2">2</option>
               <option value="3">3</option>
               <option value="4">4</option>
               <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-              <option value="10">10</option>
             </select>
           </label>
           <label>
             Payment
-            <select required name="payment" id="inputPayment">
-              <option value="Cash on Delivery">💵 Cash on Delivery</option>
-              <option value="Online Payment">💳 Online Payment</option>
+            <select required name="payment">
+              <option value="Cash on delivery">Cash on delivery</option>
+              <option value="Pickup">Pickup</option>
             </select>
           </label>
         </div>
 
         <label>
           Address / Notes
-          <textarea required name="address" autocomplete="street-address" placeholder="Street, area, landmark..." id="inputAddress"></textarea>
-          <span class="fieldError" id="errAddress">⚠ Please enter your delivery address</span>
+          <textarea required name="address" autocomplete="street-address" placeholder="Street, area, landmark..."></textarea>
         </label>
 
         <button class="btn btnPrimary" type="submit">Confirm Order</button>
+        <div class="small" id="orderFinePrint">
+          Orders are saved to the restaurant database in real time.
+        </div>
       </form>
     </div>
   </div>
@@ -2091,6 +2057,7 @@
                   <p class="cardDesc">${esc(c.short)}</p>
                   <div class="cardActions">
                     <span class="btn btnPrimary">Open</span>
+                    <span class="btn">Swipe →</span>
                   </div>
                 </div>
               </a>
@@ -2218,7 +2185,18 @@
             </div>
           `);
 
+        const right = el(`
+            <div class="mutedBox">
+              <div style="display:grid;gap:8px">
+                <div><strong style="color:var(--text)">How it works</strong></div>
+                <div>Tap <strong style="color:var(--text)">Order Now</strong>, enter name + phone + address, and the order saves as “Recent”.</div>
+                <div class="small">Next step: connect to WhatsApp / admin dashboard for real restaurant orders.</div>
+              </div>
+            </div>
+          `);
+
         wrap.appendChild(left);
+        wrap.appendChild(right);
         root.appendChild(wrap);
 
         if (isPizza) {
@@ -2329,6 +2307,8 @@
       // Make sure qty selector is visible for single-item orders
       const qtyLabel = orderForm.querySelector('select[name="qty"]')?.closest('label');
       if (qtyLabel) qtyLabel.style.display = '';
+      const fp = document.getElementById("orderFinePrint");
+      if (fp) fp.textContent = "Orders are saved to the restaurant database in real time.";
 
       modal.classList.add("open");
       const nameInput = orderForm.querySelector('input[name="name"]');
@@ -2352,39 +2332,22 @@
     orderForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      // Clear previous errors
-      document.querySelectorAll('.fieldError').forEach(e => e.classList.remove('visible'));
-      document.querySelectorAll('.inputError').forEach(e => e.classList.remove('inputError'));
+      // 1. Strict verification guard check: Make sure all details are filled properly
+      if (!orderForm.checkValidity()) {
+        orderForm.reportValidity(); // Highlights the exact empty/half-filled field to user
+        toast("⚠️ Please complete your information first!", true);
+        return;
+      }
 
-      const nameVal    = orderForm.querySelector('[name="name"]').value.trim();
-      const phoneVal   = orderForm.querySelector('[name="phone"]').value.trim();
+      // Additional custom sanity check for spaces or half-entered context fields
+      const nameVal = orderForm.querySelector('[name="name"]').value.trim();
+      const phoneVal = orderForm.querySelector('[name="phone"]').value.trim();
       const addressVal = orderForm.querySelector('[name="address"]').value.trim();
 
-      let hasError = false;
-
-      if (nameVal.length < 2) {
-        document.getElementById('errName').classList.add('visible');
-        document.getElementById('inputName').classList.add('inputError');
-        document.getElementById('inputName').focus();
-        hasError = true;
+      if (nameVal.length < 2 || phoneVal.length < 5 || addressVal.length < 6) {
+        toast("⚠️ Please complete your information first!", true);
+        return;
       }
-
-      const phoneDigits = phoneVal.replace(/\D/g, '');
-      if (phoneDigits.length !== 11) {
-        document.getElementById('errPhone').classList.add('visible');
-        document.getElementById('inputPhone').classList.add('inputError');
-        if (!hasError) document.getElementById('inputPhone').focus();
-        hasError = true;
-      }
-
-      if (addressVal.length < 6) {
-        document.getElementById('errAddress').classList.add('visible');
-        document.getElementById('inputAddress').classList.add('inputError');
-        if (!hasError) document.getElementById('inputAddress').focus();
-        hasError = true;
-      }
-
-      if (hasError) return;
 
       if (!currentOrderTarget) return;
 
@@ -2503,10 +2466,6 @@
       const key = cartKey(catId, itemId, size);
       const existing = cart.find(i => i.id === key);
       if (existing) {
-        if (existing.qty >= 10) {
-          toast(`⚠️ Max 10 of "${name}" allowed!`, true);
-          return;
-        }
         existing.qty += 1;
       } else {
         cart.push({ id: key, catId, itemId, size, name, image, catName, price: finalPrice, qty: 1 });
@@ -2524,12 +2483,7 @@
     function changeQty(key, delta) {
       const item = cart.find(i => i.id === key);
       if (!item) return;
-      const newQty = item.qty + delta;
-      if (newQty > 10) {
-        toast("⚠️ Maximum 10 of the same item allowed!", true);
-        return;
-      }
-      item.qty = Math.max(1, newQty);
+      item.qty = Math.max(1, item.qty + delta);
       updateCartBadges();
       renderCartItems();
     }
@@ -2645,6 +2599,7 @@
       setTimeout(() => nameInput?.focus(), 0);
 
       // Override the fine print
+      const fp = document.getElementById("orderFinePrint");
       if (fp) fp.textContent = `Ordering: ${summary}`;
     });
 
@@ -2933,7 +2888,7 @@
 
   <!-- Push Notifications -->
   <script>
-    const VAPID_PUBLIC = 'BLDsGezSVrtcdGWywN2if3C1vSaXW-PNbimJAY6qJPrm9TnjdjtOou_UACurbj5xsVqz7vqpFy6yATMT6UtI3K0';
+    const VAPID_PUBLIC = 'BIJarVvnZd9SmOY-3btgL2JHKcH7ybl7q8IGtlFFfKy-QhTzwSvkwQ1ib3dgVUBXPCh4rPIhdoptLbfl_WRXGIo';
 
     function urlBase64ToUint8Array(base64String) {
       const padding = '='.repeat((4 - base64String.length % 4) % 4);
