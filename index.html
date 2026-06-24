@@ -2330,6 +2330,16 @@
       const qtyLabel = orderForm.querySelector('select[name="qty"]')?.closest('label');
       if (qtyLabel) qtyLabel.style.display = '';
 
+      // Update displayed price when qty changes
+      const qtySelect = orderForm.querySelector('select[name="qty"]');
+      if (qtySelect) {
+        qtySelect.value = '1';
+        qtySelect.oninput = () => {
+          const qty = Number(qtySelect.value) || 1;
+          document.getElementById('orderSubtitle').textContent = `${c.name} • ${money(currentOrderTarget.finalPrice * qty)}`;
+        };
+      }
+
       modal.classList.add("open");
       const nameInput = orderForm.querySelector('input[name="name"]');
       setTimeout(() => nameInput?.focus(), 0);
