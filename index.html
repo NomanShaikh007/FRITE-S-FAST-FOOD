@@ -2946,41 +2946,20 @@
 
     async function registerPush(orderId) {
       try {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-          console.log('Push not supported');
+        if (!('serviceWorker' in navigator)) {
+          console.log('Service Worker not supported');
+          return;
+        }
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          console.log('Notification permission denied');
           return;
         }
         const reg = await navigator.serviceWorker.register('/sw.js');
-        console.log('SW registered');
         await navigator.serviceWorker.ready;
-        console.log('SW ready');
-
-        const permission = await Notification.requestPermission();
-        console.log('Permission:', permission);
-        if (permission !== 'granted') return;
-
-        // Always unsubscribe old and create fresh subscription
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) {
-          await existing.unsubscribe();
-          console.log('Unsubscribed old subscription');
-        }
-
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
-        });
-        console.log('New subscription:', JSON.stringify(sub));
-
-        const { error } = await sb.from('push_subscriptions').upsert({
-          order_id: orderId,
-          subscription: JSON.stringify(sub),
-          created_at: new Date().toISOString()
-        }, { onConflict: 'order_id' });
-
-        if (error) console.error('Supabase upsert error:', error);
-        else console.log('Push subscription saved for order:', orderId);
-
+        // Tell sw.js to poll this order until it's done
+        reg.active.postMessage({ type: 'WATCH_ORDER', orderId });
+        console.log('✅ SW now watching order:', orderId);
       } catch(e) {
         console.error('Push registration error:', e);
       }
