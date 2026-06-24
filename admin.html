@@ -954,22 +954,9 @@
         const { error } = await sb.from('orders').update({ status: newStatus }).eq('id', id);
         if (error) throw error;
 
-        // Send push notification to customer when marked as done
+        // Customer notified via sw.js polling — no edge function needed
         if (newStatus === 'done') {
-          fetch(SUPABASE_URL + '/functions/v1/send-push', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + SUPABASE_KEY
-            },
-            body: JSON.stringify({ order_id: id })
-          })
-          .then(r => r.json())
-          .then(d => {
-            if (d.ok) console.log('✅ Notification sent to customer!');
-            else console.error('❌ Push failed:', d.error);
-          })
-          .catch(e => console.error('Push fetch error:', e));
+          console.log('✅ Order marked done — customer sw.js will notify them.');
         }
 
       } catch (err) {
